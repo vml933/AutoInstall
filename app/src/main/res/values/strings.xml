@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">更新程式</string>
+    <string name="btnDoUpdateLabel">下載並更新</string>
+    <string name="btnCancelLabel">取消</string>
+    <string name="downloadWaiting">下載中...</string>
+    <string name="downloadComplete">下載完成，開始更新</string>
+    <string name="downloadCancel">取消</string>
+</resources>
