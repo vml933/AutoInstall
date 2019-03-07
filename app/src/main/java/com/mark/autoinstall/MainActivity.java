@@ -3,7 +3,6 @@ package com.mark.autoinstall;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.icu.util.Calendar;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -20,6 +19,7 @@ import android.widget.TextView;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -29,32 +29,47 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static String updateURL = "https://dummyApp.surge.sh/UpdatedApp.apk";
+    private static String updateURL = "https://dummyapp.surge.sh/DummyApp.apk";
 
     private ProgressBar progressBar;
     private ProgressBar progressIcon;
-    private Button btnDoUpdate;
+    private Button btnDownloadAndUpdate;
+    private Button btnUpdateLocal;
     private Button btnCancel;
     private TextView stateLabel;
-    private UpdateWork updateWork;
+    private DpdateWork downloadWork;
+    private String appFileName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        AskForPermission();
+        appFileName = GetFileNameFromUrl(updateURL);
 
         progressBar = findViewById(R.id.ProgressBar);
         progressIcon = findViewById(R.id.ProgressIcon);
         stateLabel = findViewById(R.id.StateLabel);
-        btnDoUpdate = findViewById(R.id.BtnDoUpdate);
-        btnDoUpdate.setOnClickListener(new Button.OnClickListener(){
+        btnDownloadAndUpdate = findViewById(R.id.BtnDownloadAndUpdate);
+        btnDownloadAndUpdate.setOnClickListener(new Button.OnClickListener(){
 
             @Override
             public void onClick(View view) {
-                Reset();
+
+                if(appFileName==null || appFileName=="")
+                    return;
+
+                ResetDownloadUI();
                 DoUpdate();
+            }
+        });
+
+        btnUpdateLocal = findViewById(R.id.BtnUpdateLocal);
+        btnUpdateLocal.setOnClickListener(new Button.OnClickListener(){
+
+            @Override
+            public void onClick(View view) {
+                DoInstall();
             }
         });
 
@@ -65,12 +80,8 @@ public class MainActivity extends AppCompatActivity {
                 DoCancel();
             }
         });
-    }
 
-    private  void ResetProgressBar(){
-        progressBar.setProgress(0);
-        progressBar.setMax(100);
-        progressIcon.setVisibility(View.VISIBLE);
+        AskForPermission();
     }
 
     private void AskForPermission(){
@@ -87,36 +98,44 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void ResetDownloadUI(){
+        stateLabel.setText("");
+        progressBar.setMax(100);
+        progressBar.setProgress(0);
+        SwitchBusyIcon(true);
+    }
+
+    private void SwitchBusyIcon(boolean flag){
+        int visible = flag ? View.VISIBLE: View.INVISIBLE;
+        progressIcon.setVisibility(visible);
+    }
+
     private void DoUpdate(){
-        updateWork = new UpdateWork();
-        updateWork.execute(updateURL);
+        downloadWork = new DpdateWork();
+        downloadWork.execute(updateURL);
     }
 
     private  void DoCancel(){
-        if(updateWork!=null){
-            updateWork.cancel(false);
+        if(downloadWork !=null){
+            downloadWork.cancel(true);
         }
     }
 
     private  void SetStateLabel(String msg){
-
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-        Date curDate = new Date(System.currentTimeMillis()) ; // 獲取當前時間
-
+        Date curDate = new Date(System.currentTimeMillis()) ;
         String str = formatter.format(curDate);
-
         stateLabel.setText(str+":"+msg);
-    }
-
-    private void Reset(){
-        stateLabel.setText("");
-        progressBar.setProgress(0);
     }
 
     private void DoInstall(){
 
         File downloadPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        File file = new File(downloadPath.getPath(), "UpdatedApp.apk");
+        File file = new File(downloadPath.getPath(), appFileName);
+        if(!file.exists()){
+            SetStateLabel(getResources().getString(R.string.fileNotExist));
+            return;
+        }
 
         Uri fileUri = Uri.fromFile(file);
 
@@ -133,68 +152,57 @@ public class MainActivity extends AppCompatActivity {
         this.startActivity(intent);
     }
 
-    class UpdateWork extends AsyncTask<String, Integer, String> {
+    public String GetFileNameFromUrl(String urlString) {
+        return urlString.substring(urlString.lastIndexOf('/') + 1).split("\\?")[0].split("#")[0];
+    }
+
+    class DpdateWork extends AsyncTask<String, Integer, String> {
 
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            ResetProgressBar();
             SetStateLabel(getResources().getString(R.string.downloadWaiting));
         }
 
         @Override
         protected String doInBackground(String... params) {
-            int count;
+
             try{
+
                 URL url = new URL(params[0]);
-                HttpURLConnection conection = (HttpURLConnection) url.openConnection();
-                conection.setUseCaches(false);
-                conection.setRequestMethod("GET");
-                conection.setDoOutput(true);
-                conection.connect();
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setUseCaches(false);
+                connection.connect();
+
+                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    return "Server returned HTTP " + connection.getResponseCode() + " " + connection.getResponseMessage();
+                }
 
                 File downloadPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-                File outputFile = new File(downloadPath.getPath(), "UpdatedApp.apk");
+                File outputFile = new File(downloadPath.getPath(), appFileName);
                 if(outputFile.exists()){
                     outputFile.delete();
                 }
 
-                /*
-                FileOutputStream fos = new FileOutputStream(outputFile);
-                InputStream is = conection.getInputStream();
-                byte[] buffer = new byte[1024];
-                int len1 = 0;
-                while ((len1 = is.read(buffer)) != -1) {
-                    fos.write(buffer, 0, len1);
-                    publishProgress(100);
-                }
-                fos.close();
-                is.close();
-                */
-
-                //Android 6下載就發生問題，待解決
-                Log.d("mark","hih already readed 1");
-                int lenghtOfFile = conection.getContentLength();
-                Log.d("mark","hih already readed 1-1");
+                int lenghtOfFile = connection.getContentLength();
                 InputStream input = new BufferedInputStream(url.openStream(),1024);
-                //InputStream input = conection.getInputStream();
-                Log.d("mark","hih already readed 1-2");
-                OutputStream output = new FileOutputStream(downloadPath.toString() + "/UpdatedApp.apk");
-                Log.d("mark","hih already readed 1-3");
+                OutputStream output = new FileOutputStream(downloadPath.toString() + "/"+ appFileName);
                 byte data[] = new byte[1024];
-                Log.d("mark","hih already readed 2");
-                long current = 0;
+                long total = 0;
+                int count;
                 while ((count = input.read(data)) != -1) {
-                    current += count;
-                    publishProgress((int)current/(lenghtOfFile*100));
+                    total += count;
+                    int percent = (int)total*100/lenghtOfFile; //0~100
+                    publishProgress(percent);
                     output.write(data, 0, count);
                 }
                 output.flush();
-                Log.d("mark","hih already readed 3");
                 output.close();
                 input.close();
-            }catch (Exception e){
-                Log.d("mark", "Download Error:"+e.getMessage());
+            }catch (IOException e){
+                Log.d("mark", "Download io Error:"+e.getMessage());
+            }catch (SecurityException e){
+                Log.d("mark", "Download security Error:"+e.getMessage());
             }
             return null;
         }
@@ -206,17 +214,23 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-            SetStateLabel(getResources().getString(R.string.downloadComplete));
-            progressIcon.setVisibility(View.INVISIBLE);
-            DoInstall();
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            if(result==null){
+                SetStateLabel(getResources().getString(R.string.downloadComplete));
+                SwitchBusyIcon(false);
+
+                DoInstall();
+            }else{
+                SetStateLabel(result);
+            }
         }
 
         @Override
         protected void onCancelled() {
             super.onCancelled();
-            progressIcon.setVisibility(View.INVISIBLE);
+
+            SwitchBusyIcon(false);
             SetStateLabel(getResources().getString(R.string.downloadCancel));
         }
     }

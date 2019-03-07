@@ -33,8 +33,16 @@
         <Button
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/btnDoUpdateLabel"
-            android:id="@+id/BtnDoUpdate"
+            android:text="@string/btnDownloadAndUpdateLabel"
+            android:id="@+id/BtnDownloadAndUpdate"
+            android:gravity="center_horizontal|center_vertical"
+            />
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btnUpdateLocalLabel"
+            android:id="@+id/BtnUpdateLocal"
             android:gravity="center_horizontal|center_vertical"
             />
 
@@ -45,9 +53,5 @@
             android:id="@+id/BtnCancel"
             android:gravity="center_horizontal|center_vertical"
             />
-
-
-
-
 
 </LinearLayout>
