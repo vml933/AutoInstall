@@ -29,7 +29,7 @@ import java.util.Date;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static String updateURL = "https://dummyapp.surge.sh/DummyApp.apk";
+    private String updateURL;
 
     private ProgressBar progressBar;
     private ProgressBar progressIcon;
@@ -44,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        updateURL = this.getResources().getString(R.string.apkUpdateUrl);
 
         appFileName = GetFileNameFromUrl(updateURL);
 
@@ -192,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
                 int count;
                 while ((count = input.read(data)) != -1) {
                     total += count;
-                    int percent = (int)total*100/lenghtOfFile; //0~100
+                    int percent = (int)(total*100/lenghtOfFile); //0~100
                     publishProgress(percent);
                     output.write(data, 0, count);
                 }
