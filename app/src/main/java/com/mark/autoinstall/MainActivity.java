@@ -235,6 +235,8 @@ public class MainActivity extends AppCompatActivity {
             SwitchBusyIcon(false);
             SetStateLabel(getResources().getString(R.string.downloadCancel));
         }
+
+
     }
 
 }

@@ -7,5 +7,6 @@
     <string name="downloadComplete">下載完成，開始更新</string>
     <string name="downloadCancel">取消</string>
     <string name="fileNotExist">APK檔案不存在</string>
-    <string name="apkUpdateUrl">https://storage.googleapis.com/techart13app/VREnglish_Study.apk</string>
+    <string name="toNextActivity">跳轉頁面中</string>
+    <string name="apkUpdateUrl">https://storage.googleapis.com/techart13other/VREnglish_Study.apk</string>
 </resources>
